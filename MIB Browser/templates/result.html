@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultat SNMP</title>
+</head>
+<body>
+    <h1>Resultat de l'operació SNMP</h1>
+    <ul>
+        {% for line in result %}
+            <li>{{ line }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/">Torna al formulari</a>
+</body>
+</html>
