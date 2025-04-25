@@ -5,6 +5,8 @@ from pysnmp.hlapi import (
     ContextData, ObjectType, ObjectIdentity
 )
 from pysnmp.proto.rfc1902 import OctetString, Integer
+from pysnmp.error import PySnmpError
+import socket
 
 app = Flask(__name__)
 
@@ -14,35 +16,36 @@ def index():
 
 @app.route("/snmp", methods=["POST"])
 def snmp():
-    agent_ip = request.form["agent_ip"]
-    version = request.form["version"]
-    community = request.form["community"]
-    oid = request.form["oid"]
-    operation = request.form["operation"]
-    set_value = request.form.get("set_value", "")
-    set_type = request.form.get("set_type", "Integer")
+    try:
+        agent_ip = request.form["agent_ip"]
+        version = request.form["version"]
+        community = request.form["community"]
+        oid = request.form["oid"]
+        operation = request.form["operation"]
+        set_value = request.form.get("set_value", "")
+        set_type = request.form.get("set_type", "Integer")
 
-    if operation != "bulkwalk" and not oid.endswith(".0"):
-        oid += ".0"
-    if operation == "get":
-        result = snmp_get(agent_ip, community, oid)
-    elif operation == "next":
-        result = snmp_next(agent_ip, community, oid)
-    elif operation == "bulkwalk":
-        result = snmp_bulkwalk(agent_ip, community, oid)
-    elif operation == "set":
-        if set_type == "OctetString":
-            value = OctetString(set_value)
-        else:
-            try:
-                value = Integer(int(set_value))
-            except ValueError:
-                return render_template("result.html", result=["Valor no vàlid per a Integer."])
-        result = snmp_set(agent_ip, community, oid, value)
-    else:
-        result = ["Operació no reconeguda"]
+        if operation != "bulkwalk" and not oid.endswith(".0"):
+            oid += ".0"
+        if operation == "get":
+            result = snmp_get(agent_ip, community, oid)
+        elif operation == "next":
+            result = snmp_next(agent_ip, community, oid)
+        elif operation == "bulkwalk":
+            result = snmp_bulkwalk(agent_ip, community, oid)
+        elif operation == "set":
+            if set_type == "OctetString":
+                value = OctetString(set_value)
+            else:
+                try:
+                    value = Integer(int(set_value))
+                except ValueError:
+                    return render_template("error.html", error_message="Valor incorrecte", error_detail="El valor no és vàlid per a Integer.")
+            result = snmp_set(agent_ip, community, oid, value)
+        return render_template("result.html", result=result, agent_ip=agent_ip, version=version, community=community, oid=oid, operation=operation)
 
-    return render_template("result.html", result=result)
+    except (PySnmpError, socket.gaierror) as e:
+        return render_template("error.html", error_message="Error SNMP o de xarxa", error_detail=str(e))
 
 def snmp_get(ip, community, oid):
     result = []
@@ -88,8 +91,9 @@ def snmp_bulkwalk(ip, community, oid):
         SnmpEngine(),
         CommunityData(community),
         UdpTransportTarget((ip, 161)),
-        ContextData(), 0, 25,
+        ContextData(), 0, 1,
         ObjectType(ObjectIdentity(oid)),
+        lexicographicMode = False
     )
     for (errorIndication, errorStatus, errorIndex, varBinds) in iterator:
         if errorIndication:
