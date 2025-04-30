@@ -221,10 +221,10 @@ def start_trap_listener():
     config.addTransport(
         snmpEngine,
         udp.domainName,
-        udp.UdpTransport().openServerMode(('0.0.0.0', 9162))
+        udp.UdpTransport().openServerMode(('0.0.0.0', 162))
     )
     ntfrcv.NotificationReceiver(snmpEngine, trap_callback)
-    print("Listener SNMP Trap iniciado en puerto 9162...")  # Asegúrate de que esto se imprima
+    print("Listener SNMP Trap iniciado en puerto 162...")  # Asegúrate de que esto se imprima
 
     def dispatcher():
         snmpEngine.transportDispatcher.jobStarted(1)
