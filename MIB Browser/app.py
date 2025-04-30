@@ -7,12 +7,33 @@ from pysnmp.hlapi import (
 from pysnmp.proto.rfc1902 import OctetString, Integer
 from pysnmp.error import PySnmpError
 import socket
+import psycopg2
+from datetime import datetime
 
 app = Flask(__name__)
 
+# Database configuration - replace with your credentials
+DB_CONFIG = {
+    'host': 'localhost',
+    'port': 5432,
+    'user': 'admin',
+    'password': 'admin',
+    'dbname': 'mib_browser'
+}
+
+def get_db_connection():
+    return psycopg2.connect(**DB_CONFIG)
+
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    # Fetch OIDs for dropdown
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT oid, traduccio_oid FROM oids")
+    oid_list = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("index.html", oid_list=oid_list)
 
 @app.route("/snmp", methods=["POST"])
 def snmp():
@@ -47,6 +68,39 @@ def snmp():
     except (PySnmpError, socket.gaierror) as e:
         return render_template("error.html", error_message="Error SNMP o de xarxa", error_detail=str(e))
 
+@app.route("/traps", methods=["GET"])
+def show_traps():
+    # filter parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT trap_id, date_time, transport FROM notifications"
+    params = []
+    if start_date and end_date:
+        query += " WHERE date_time BETWEEN %s AND %s"
+        params = [start_date + ' 00:00:00', end_date + ' 23:59:59']
+    elif start_date:
+        query += " WHERE DATE(date_time) = %s"
+        params = [start_date]
+    cursor.execute(query, params)
+    traps = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("traps.html", traps=traps, start_date=start_date, end_date=end_date)
+
+@app.route("/traps/<int:trap_id>", methods=["GET"])
+def trap_details(trap_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT oid, value FROM varbinds WHERE trap_id = %s", (trap_id,))
+    varbinds = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("trap_details.html", trap_id=trap_id, varbinds=varbinds)
+
+# SNMP helper functions unchanged...
+
 def snmp_get(ip, community, oid):
     result = []
     iterator = getCmd(
@@ -65,6 +119,7 @@ def snmp_get(ip, community, oid):
         for varBind in varBinds:
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
+
 
 def snmp_next(ip, community, oid):
     result = []
@@ -85,6 +140,7 @@ def snmp_next(ip, community, oid):
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
 
+
 def snmp_bulkwalk(ip, community, oid):
     result = []
     iterator = bulkCmd(
@@ -93,7 +149,7 @@ def snmp_bulkwalk(ip, community, oid):
         UdpTransportTarget((ip, 161)),
         ContextData(), 0, 1,
         ObjectType(ObjectIdentity(oid)),
-        lexicographicMode = False
+        lexicographicMode=False
     )
     for (errorIndication, errorStatus, errorIndex, varBinds) in iterator:
         if errorIndication:
@@ -106,6 +162,7 @@ def snmp_bulkwalk(ip, community, oid):
             for varBind in varBinds:
                 result.append(f'{varBind[0]} = {varBind[1].prettyPrint()}')
     return result
+
 
 def snmp_set(ip, community, oid, value):
     result = []
