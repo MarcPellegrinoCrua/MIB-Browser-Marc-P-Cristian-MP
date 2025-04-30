@@ -9,12 +9,16 @@ from pysnmp.error import PySnmpError
 import socket
 import psycopg2
 from datetime import datetime
+import threading
+
+from pysnmp.carrier.asyncore.dgram import udp
+from pysnmp.entity import engine, config
+from pysnmp.entity.rfc3413 import ntfrcv
 
 app = Flask(__name__)
 
-# Database configuration - replace with your credentials
 DB_CONFIG = {
-    'host': 'localhost',
+    'host': '127.0.0.1',
     'port': 5432,
     'user': 'admin',
     'password': 'admin',
@@ -26,7 +30,6 @@ def get_db_connection():
 
 @app.route("/", methods=["GET"])
 def index():
-    # Fetch OIDs for dropdown
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT oid, traduccio_oid FROM oids")
@@ -70,7 +73,6 @@ def snmp():
 
 @app.route("/traps", methods=["GET"])
 def show_traps():
-    # filter parameters
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     conn = get_db_connection()
@@ -99,8 +101,6 @@ def trap_details(trap_id):
     conn.close()
     return render_template("trap_details.html", trap_id=trap_id, varbinds=varbinds)
 
-# SNMP helper functions unchanged...
-
 def snmp_get(ip, community, oid):
     result = []
     iterator = getCmd(
@@ -120,7 +120,6 @@ def snmp_get(ip, community, oid):
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
 
-
 def snmp_next(ip, community, oid):
     result = []
     iterator = nextCmd(
@@ -139,7 +138,6 @@ def snmp_next(ip, community, oid):
         for varBind in varBinds:
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
-
 
 def snmp_bulkwalk(ip, community, oid):
     result = []
@@ -163,7 +161,6 @@ def snmp_bulkwalk(ip, community, oid):
                 result.append(f'{varBind[0]} = {varBind[1].prettyPrint()}')
     return result
 
-
 def snmp_set(ip, community, oid, value):
     result = []
     iterator = setCmd(
@@ -182,6 +179,66 @@ def snmp_set(ip, community, oid, value):
         for varBind in varBinds:
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
+def trap_callback(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
+    print("Trap recibido.")  # Este mensaje debería imprimirse cuando el trap es recibido.
+    try:
+        # Conexión a la base de datos
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        timestamp = datetime.now()
+
+        # Por defecto, toma el primer varbind como 'principal'
+        main_oid = str(varBinds[0][0]) if varBinds else 'desconegut'
+        main_value = str(varBinds[0][1]) if varBinds else 'desconegut'
+
+        # Insertar en la tabla notifications (ahora con oid y value)
+        cursor.execute("""
+            INSERT INTO notifications (oid, value, date_time) 
+            VALUES (%s, %s, %s) RETURNING trap_id
+        """, (main_oid, main_value, timestamp))
+        trap_id = cursor.fetchone()[0]
+        print(f"Trap guardado con trap_id: {trap_id}")
+
+        # Insertar cada varbind en la tabla varbinds
+        for oid, value in varBinds:
+            cursor.execute("""
+                INSERT INTO varbinds (trap_id, oid, value) 
+                VALUES (%s, %s, %s)
+            """, (trap_id, str(oid), str(value)))
+            print(f"Varbind guardado: OID = {oid}, Value = {value}")
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print(f"Error al insertar el trap en la base de datos: {e}")
+
+def start_trap_listener():
+    snmpEngine = engine.SnmpEngine()
+    config.addV1System(snmpEngine, 'my-area', 'public_mp')
+    config.addTransport(
+        snmpEngine,
+        udp.domainName,
+        udp.UdpTransport().openServerMode(('0.0.0.0', 9162))
+    )
+    ntfrcv.NotificationReceiver(snmpEngine, trap_callback)
+    print("Listener SNMP Trap iniciado en puerto 9162...")  # Asegúrate de que esto se imprima
+
+    def dispatcher():
+        snmpEngine.transportDispatcher.jobStarted(1)
+        try:
+            snmpEngine.transportDispatcher.runDispatcher()
+        except Exception as e:
+            snmpEngine.transportDispatcher.closeDispatcher()
+            print(f"Error en listener: {e}")
+            print(e)  # Agregar un mensaje de error para depuración
+
+    threading.Thread(target=dispatcher, daemon=True).start()
 
 if __name__ == "__main__":
+    trap_thread = threading.Thread(target=start_trap_listener, daemon=True)
+    trap_thread.start()
+
     app.run(debug=True)

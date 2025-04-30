@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traps SNMP</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <h1>Traps SNMP</h1>
+
+    <h2>Filtra per dates</h2>
+    <form action="/traps" method="GET">
+        <label for="start_date">Data d'inici:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date }}"><br><br>
+
+        <label for="end_date">Data de finalització:</label>
+        <input type="date" id="end_date" name="end_date" value="{{ end_date }}"><br><br>
+
+        <button type="submit">Filtrar</button>
+    </form>
+
+    <h3>Llistat de Traps:</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Trap ID</th>
+                <th>Data i Hora</th>
+                <th>Transport</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for trap in traps %}
+                <tr>
+                    <td><a href="/traps/{{ trap[0] }}">{{ trap[0] }}</a></td>
+                    <td>{{ trap[1] }}</td>
+                    <td>{{ trap[2] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/">Tornar a la pàgina principal</a>
+</body>
+</html>

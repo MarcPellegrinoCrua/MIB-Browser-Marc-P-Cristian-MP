@@ -1,0 +1,14 @@
+services:
+  db:
+    container_name: mib-browser
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: mib_browser
+    volumes:
+        - ./my_data:/var/lib/postgresql/data
+    ports:
+        - '5432:5432'

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalls del Trap</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <h1>Detalls del Trap ID: {{ trap_id }}</h1>
+
+    <h3>Varbinds:</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>OID</th>
+                <th>Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for varbind in varbinds %}
+                <tr>
+                    <td>{{ varbind[0] }}</td>
+                    <td>{{ varbind[1] }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/traps">Tornar a la llista de traps</a>
+</body>
+</html>

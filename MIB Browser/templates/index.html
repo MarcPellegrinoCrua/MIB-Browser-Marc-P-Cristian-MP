@@ -7,6 +7,7 @@
 </head>
 <body>
     <h1>MIB Browser</h1>
+    <a href="/traps">Accedeix als Traps</a>
     <form action="/snmp" method="post">
         <label>IP de l'agent: <input type="text" name="agent_ip" required></label><br>
         <label>Versió SNMP:
@@ -15,8 +16,8 @@
                 <option value="2c">v2c</option>
             </select>
         </label><br>
-        <label>Comunitat: <input type="text" name="community" value="public_mp"></label><br>
-        <label>OID: <input type="text" name="oid" required></label><br>   
+        <label>Comunitat: <input type="text" name="community" value="public"></label><br>
+        <label>OID: <input type="text" name="oid" required></label><br>
         <label>Valor a establecer: <input type="text" name="set_value"></label><br>
         <label>Tipo de valor:
             <select name="set_type">
