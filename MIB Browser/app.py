@@ -17,6 +17,8 @@ from pysnmp.entity.rfc3413 import ntfrcv
 
 app = Flask(__name__)
 
+puerto = 162
+
 DB_CONFIG = {
     'host': '127.0.0.1',
     'port': 5432,
@@ -180,27 +182,27 @@ def snmp_set(ip, community, oid, value):
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
 def trap_callback(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
-    print("Trap recibido.")  # Este mensaje debería imprimirse cuando el trap es recibido.
+    print("Trap recibido.")
     try:
-        # Conexión a la base de datos
         conn = get_db_connection()
         cursor = conn.cursor()
 
         timestamp = datetime.now()
 
-        # Por defecto, toma el primer varbind como 'principal'
+        protocolo = "udp"
+        transport = str(f"{protocolo}:{puerto}")
+        print(f"Transport usado: {transport}")
+
         main_oid = str(varBinds[0][0]) if varBinds else 'desconegut'
         main_value = str(varBinds[0][1]) if varBinds else 'desconegut'
 
-        # Insertar en la tabla notifications (ahora con oid y value)
         cursor.execute("""
-            INSERT INTO notifications (oid, value, date_time) 
-            VALUES (%s, %s, %s) RETURNING trap_id
-        """, (main_oid, main_value, timestamp))
+            INSERT INTO notifications (oid, value, date_time, transport) 
+            VALUES (%s, %s, %s, %s) RETURNING trap_id
+        """, (main_oid, main_value, timestamp, transport))
         trap_id = cursor.fetchone()[0]
         print(f"Trap guardado con trap_id: {trap_id}")
 
-        # Insertar cada varbind en la tabla varbinds
         for oid, value in varBinds:
             cursor.execute("""
                 INSERT INTO varbinds (trap_id, oid, value) 
@@ -221,10 +223,10 @@ def start_trap_listener():
     config.addTransport(
         snmpEngine,
         udp.domainName,
-        udp.UdpTransport().openServerMode(('0.0.0.0', 162))
+        udp.UdpTransport().openServerMode(('0.0.0.0', puerto))
     )
     ntfrcv.NotificationReceiver(snmpEngine, trap_callback)
-    print("Listener SNMP Trap iniciado en puerto 162...")  # Asegúrate de que esto se imprima
+    print(f"Listener SNMP Trap iniciado en puerto {puerto}...")
 
     def dispatcher():
         snmpEngine.transportDispatcher.jobStarted(1)
@@ -233,7 +235,7 @@ def start_trap_listener():
         except Exception as e:
             snmpEngine.transportDispatcher.closeDispatcher()
             print(f"Error en listener: {e}")
-            print(e)  # Agregar un mensaje de error para depuración
+            print(e)
 
     threading.Thread(target=dispatcher, daemon=True).start()
 
