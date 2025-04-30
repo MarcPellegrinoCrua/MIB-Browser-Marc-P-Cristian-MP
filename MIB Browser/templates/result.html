@@ -18,8 +18,13 @@
     <div>
         {% for line in result %}
             <div class="result-item">
-                <div class="enunciado">{{ line.split('=')[0].strip() }}</div>
-                <div class="respuesta">{{ line.split('=')[1].strip() }}</div>
+                {% if '=' in line %}
+                    <div class="enunciado">{{ line.split('=')[0].strip() }}</div>
+                    <div class="respuesta">{{ line.split('=')[1].strip() }}</div>
+                {% else %}
+                    <div class="enunciado">Mensaje:</div>
+                    <div class="respuesta">{{ line }}</div>
+                {% endif %}
             </div>
         {% endfor %}
     </div>

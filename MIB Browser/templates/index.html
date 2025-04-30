@@ -1,39 +1,78 @@
 <!DOCTYPE html>
-<html lang="ca">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>MIB Browser</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
     <h1>MIB Browser</h1>
-    <a href="/traps">Accedeix als Traps</a>
-    <form action="/snmp" method="post">
-        <label>IP de l'agent: <input type="text" name="agent_ip" required></label><br>
-        <label>Versió SNMP:
-            <select name="version">
-                <option value="1">v1</option>
-                <option value="2c">v2c</option>
-            </select>
-        </label><br>
-        <label>Comunitat: <input type="text" name="community" value="public"></label><br>
-        <label>OID: <input type="text" name="oid" required></label><br>
-        <label>Valor a establecer: <input type="text" name="set_value"></label><br>
-        <label>Tipo de valor:
-            <select name="set_type">
-                <option value="OctetString">OctetString</option>
-                <option value="Integer">Integer</option>
-            </select>
-        </label><br>
-        <label>Operació:
-            <select name="operation">
-                <option value="get">GET</option>
-                <option value="next">NEXT</option>
-                <option value="set">SET</option>
-                <option value="bulkwalk">BULKWALK</option>
-            </select>
-        </label><br>
+    <form action="{{ url_for('snmp') }}" method="post">
+        <label for="agent_ip">IP de l'agent:</label>
+        <input type="text" id="agent_ip" name="agent_ip" required><br><br>
+        <label for="version">Versió SNMP:</label>
+        <select id="version" name="version">
+            <option value="1">v1</option>
+            <option value="2c" selected>v2c</option>
+        </select><br><br>
+        <label for="community">Comunitat:</label>
+        <input type="text" id="community" name="community" value="public"><br><br>
+        <label for="oid">OID:</label>
+        <select id="oid" name="oid" required>
+            <option value="">-- Selecciona un OID --</option>
+            {% for oid_item in oid_list %}
+                <option value="{{ oid_item[0] }}">
+                    {{ oid_item[1] }} ({{ oid_item[0] }})
+                </option>
+            {% endfor %}
+        </select><br><br>
+        <label for="set_value">Valor a establecer:</label>
+        <input type="text" id="set_value" name="set_value"><br><br>
+        <label for="set_type">Tipo de valor:</label>
+        <select id="set_type" name="set_type">
+            <option value="OctetString">OctetString</option>
+            <option value="Integer">Integer</option>
+        </select><br><br>
+        <label for="operation">Operació:</label>
+        <select id="operation" name="operation">
+            <option value="get">GET</option>
+            <option value="next">NEXT</option>
+            <option value="set">SET</option>
+            <option value="bulkwalk">BULKWALK</option>
+        </select><br><br>
+        <div id="set_fields" style="display: none;">
+             <label for="set_value">Valor a establecer:</label>
+             <input type="text" id="set_value" name="set_value"><br><br>
+             <label for="set_type">Tipo de valor:</label>
+             <select id="set_type" name="set_type">
+                 <option value="OctetString">OctetString</option>
+                 <option value="Integer">Integer</option>
+             </select><br><br>
+        </div>
         <button type="submit">Enviar</button>
     </form>
+    <h2><p><a href="{{ url_for('show_traps') }}">Historial de Traps</a></p></h2>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#oid').select2({
+                placeholder: "-- Selecciona un OID --",
+                allowClear: true
+            });
+            const operationSelect = document.getElementById('operation');
+            const setFieldsDiv = document.getElementById('set_fields');
+            function toggleSetFields() {
+                if (operationSelect.value === 'set') {
+                    setFieldsDiv.style.display = 'block';
+                } else {
+                    setFieldsDiv.style.display = 'none';
+                }
+            }
+            operationSelect.addEventListener('change', toggleSetFields);
+            toggleSetFields();
+        });
+    </script>
 </body>
 </html>

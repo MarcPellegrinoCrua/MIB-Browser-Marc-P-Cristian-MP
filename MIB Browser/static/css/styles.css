@@ -110,3 +110,141 @@ form {
     flex-direction: column;
     gap: 0rem;
 }
+
+input[type="text"],
+select {
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #444;
+    padding: 6px 12px;
+    height: 34px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+input[type="text"]:focus,
+select:focus {
+    border-color: #66afe9;
+    outline: 0;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+}
+
+select {
+    padding-right: 30px;
+}
+
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-dropdown,
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
+}
+
+.select2-container--default .select2-selection--single {
+    border: 1px solid #aaa;
+    background-color: #fff;
+    border-radius: 4px;
+    height: 34px;
+    padding: 6px 12px;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #66afe9;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+    outline: none;
+}
+
+.select2-container--default.select2-container--open .select2-selection--single {
+     border-bottom-color: transparent;
+     border-bottom-left-radius: 0;
+     border-bottom-right-radius: 0;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+     height: 32px;
+     right: 6px;
+}
+
+.select2-container--default .select2-dropdown {
+    border: none;
+    box-shadow: none;
+    background-color: #fff;
+}
+
+/* --- CAMBIO AQUÍ: Restaurar el borde y añadir border-radius al campo de búsqueda --- */
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #ccc; /* Restaurar el borde */
+    border-radius: 4px; /* Añadir bordes redondeados */
+    padding: 6px 12px;
+    font-size: 1rem;
+    background-color: #fff; /* Asegurar fondo blanco */
+}
+/* --- FIN CAMBIO --- */
+
+
+.select2-container--default .select2-results__option {
+    padding: 8px 12px;
+}
+
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+     background-color: #4c6ef5;
+     color: white;
+     text-decoration: none;
+}
+
+.select2-container--default .select2-selection__rendered {
+     color: #333;
+     padding-left: 8px;
+     line-height: 20px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+     color: #999;
+     line-height: 20px;
+}
+
+.select2-container * {
+    box-sizing: inherit;
+}
+
+.select2-container--default .select2-selection--single {
+    display: flex !important;
+    align-items: center;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field::placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field::-webkit-input-placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field::-moz-placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:-ms-input-placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field::-ms-input-placeholder {
+    color: #999;
+    opacity: 1;
+}
