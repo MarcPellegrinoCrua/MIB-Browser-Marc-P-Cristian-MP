@@ -183,16 +183,13 @@ select {
     background-color: #fff;
 }
 
-/* --- CAMBIO AQUÍ: Restaurar el borde y añadir border-radius al campo de búsqueda --- */
 .select2-container--default .select2-search--dropdown .select2-search__field {
-    border: 1px solid #ccc; /* Restaurar el borde */
-    border-radius: 4px; /* Añadir bordes redondeados */
+    border: 1px solid #ccc;
+    border-radius: 4px;
     padding: 6px 12px;
     font-size: 1rem;
-    background-color: #fff; /* Asegurar fondo blanco */
+    background-color: #fff;
 }
-/* --- FIN CAMBIO --- */
-
 
 .select2-container--default .select2-results__option {
     padding: 8px 12px;

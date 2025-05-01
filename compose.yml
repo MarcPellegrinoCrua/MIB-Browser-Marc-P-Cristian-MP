@@ -5,9 +5,9 @@ services:
     restart: always
     shm_size: 128mb
     environment:
-      POSTGRES_USER: admin
+      POSTGRES_USER: admin_mc
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: mib_browser
+      POSTGRES_DB: mib_browser_mc
     volumes:
         - ./my_data:/var/lib/postgresql/data
     ports:
