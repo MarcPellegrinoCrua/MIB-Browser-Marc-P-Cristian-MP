@@ -5,9 +5,9 @@ import os
 DB_CONFIG = {
     'host': '127.0.0.1',
     'port': 5432,
-    'user': 'admin',
+    'user': 'admin_mc',
     'password': 'admin',
-    'dbname': 'mib_browser'
+    'dbname': 'mib_browser_mc'
 }
 
 def get_db_connection():

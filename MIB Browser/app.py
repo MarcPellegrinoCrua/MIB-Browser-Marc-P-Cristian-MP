@@ -28,17 +28,27 @@ DB_CONFIG = {
 }
 
 def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
+    try:
+        return psycopg2.connect(**DB_CONFIG)
+    except psycopg2.OperationalError as e:
+        print(f"Error al conectar con la base de datos: {e}")
+        return None
 
 @app.route("/", methods=["GET"])
 def index():
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT oid, traduccio_oid FROM oids")
-    oid_list = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template("index.html", oid_list=oid_list)
+    if conn is None:
+        oid_list = []
+        db_online = False
+    else:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT oid, traduccio_oid FROM oids")
+        oid_list = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        db_online = True
+    return render_template("index.html", oid_list=oid_list, db_online=db_online)
 
 @app.route("/snmp", methods=["POST"])
 def snmp():

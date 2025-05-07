@@ -17,15 +17,21 @@
             <option value="2c" selected>v2c</option>
         </select><br><br>
         <label for="community">Comunitat:</label>
-        <input type="text" id="community" name="community" value="public"><br><br>
-        <label for="oid">OID:</label>
-        <select id="oid" name="oid" required>
-            <option value="">-- Selecciona un OID --</option>
-            {% for oid_item in oid_list %}
-                <option value="{{ oid_item[0] }}">
-                    {{ oid_item[1] }} ({{ oid_item[0] }})
-                </option>
-            {% endfor %}
+        <input type="password" id="community" name="community"><br><br>
+        {% if db_online %}
+            <label for="oid">OID:</label>
+            <select id="oid" name="oid" required>
+                <option value="">-- Selecciona un OID --</option>
+                {% for oid_item in oid_list %}
+                    <option value="{{ oid_item[0] }}">
+                        {{ oid_item[1] }} ({{ oid_item[0] }})
+                    </option>
+                {% endfor %}
+            </select>
+        {% else %}
+            <label for="oid">Introduce manualmente el OID:</label>
+            <input type="text" name="oid" id="oid" placeholder="ej: 1.3.6.1.2.1.1.1.0" required>
+        {% endif %}
         </select><br><br>
         <label for="set_value">Valor a establecer:</label>
         <input type="text" id="set_value" name="set_value"><br><br>
