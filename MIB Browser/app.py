@@ -2,7 +2,8 @@ from flask import Flask, render_template, request
 from pysnmp.hlapi import (
     getCmd, setCmd, nextCmd, bulkCmd,
     SnmpEngine, CommunityData, UdpTransportTarget,
-    ContextData, ObjectType, ObjectIdentity
+    ContextData, ObjectType, ObjectIdentity,
+    UsmUserData, usmHMACMD5AuthProtocol, usmHMACSHAAuthProtocol, usmDESPrivProtocol, usmAesCfb128Protocol, usmNoAuthProtocol, usmNoPrivProtocol
 )
 from pysnmp.proto.rfc1902 import OctetString, Integer
 from pysnmp.error import PySnmpError
@@ -55,20 +56,35 @@ def snmp():
     try:
         agent_ip = request.form["agent_ip"]
         version = request.form["version"]
-        community = request.form["community"]
         oid = request.form["oid"]
         operation = request.form["operation"]
         set_value = request.form.get("set_value", "")
         set_type = request.form.get("set_type", "Integer")
 
+        community = user = authkey = privkey = auth_protocol = priv_protocol = None
+
+        if version in ['1', '2c']:
+            community = request.form.get("community")
+            if not community:
+                return render_template("error.html", error_message="Falta el parámetro 'community'", error_detail="Obligatorio para SNMP v1/v2c.")
+        elif version == '3':
+            user = request.form.get('user')
+            authkey = request.form.get('authkey')
+            privkey = request.form.get('privkey')
+            auth_protocol = request.form.get('auth_protocol')
+            priv_protocol = request.form.get('priv_protocol')
+            if not user:
+                return render_template("error.html", error_message="Falta el usuario SNMPv3", error_detail="Debes rellenar el campo 'user' para SNMPv3.")
+
         if operation != "bulkwalk" and not oid.endswith(".0"):
             oid += ".0"
+
         if operation == "get":
-            result = snmp_get(agent_ip, community, oid)
+            result = snmp_get(agent_ip, community, oid, version, user, authkey, privkey, auth_protocol, priv_protocol)
         elif operation == "next":
-            result = snmp_next(agent_ip, community, oid)
+            result = snmp_next(agent_ip, community, oid, version, user, authkey, privkey, auth_protocol, priv_protocol)
         elif operation == "bulkwalk":
-            result = snmp_bulkwalk(agent_ip, community, oid)
+            result = snmp_bulkwalk(agent_ip, community, oid, version, user, authkey, privkey, auth_protocol, priv_protocol)
         elif operation == "set":
             if set_type == "OctetString":
                 value = OctetString(set_value)
@@ -77,9 +93,24 @@ def snmp():
                     value = Integer(int(set_value))
                 except ValueError:
                     return render_template("error.html", error_message="Valor incorrecte", error_detail="El valor no és vàlid per a Integer.")
-            result = snmp_set(agent_ip, community, oid, value)
-        return render_template("result.html", result=result, agent_ip=agent_ip, version=version, community=community, oid=oid, operation=operation)
+            result = snmp_set(agent_ip, community, oid, value, version, user, authkey, privkey, auth_protocol, priv_protocol)
+        else:
+            return render_template("error.html", error_message="Operació no reconeguda", error_detail="L'operació SNMP no és vàlida.")
 
+        return render_template(
+            "result.html",
+            result=result,
+            agent_ip=agent_ip,
+            version=version,
+            community=community,
+            oid=oid,
+            operation=operation,
+            user=user,
+            authkey=authkey,
+            privkey=privkey,
+            auth_protocol=auth_protocol,
+            priv_protocol=priv_protocol
+        )
     except (PySnmpError, socket.gaierror) as e:
         return render_template("error.html", error_message="Error SNMP o de xarxa", error_detail=str(e))
 
@@ -113,15 +144,49 @@ def trap_details(trap_id):
     conn.close()
     return render_template("trap_details.html", trap_id=trap_id, varbinds=varbinds)
 
-def snmp_get(ip, community, oid):
+def get_auth_data(version, community=None, user=None, authkey=None, privkey=None, auth_protocol="NONE", priv_protocol="NONE"):
+    if version in ['1', '2c']:
+        mp_model = 0 if version == '1' else 1
+        return CommunityData(community, mpModel=mp_model)
+    elif version == '3':
+        auth_proto_map = {
+            'MD5': usmHMACMD5AuthProtocol,
+            'SHA': usmHMACSHAAuthProtocol,
+            'NONE': usmNoAuthProtocol
+        }
+        priv_proto_map = {
+            'DES': usmDESPrivProtocol,
+            'AES': usmAesCfb128Protocol,
+            'NONE': usmNoPrivProtocol
+        }
+
+        auth_proto = auth_proto_map.get(auth_protocol.upper(), usmNoAuthProtocol)
+        priv_proto = priv_proto_map.get(priv_protocol.upper(), usmNoPrivProtocol)
+
+        if auth_protocol == "NONE":
+            return UsmUserData(user)
+        elif priv_protocol == "NONE":
+            return UsmUserData(user, authkey, authProtocol=auth_proto, privProtocol=usmNoPrivProtocol)
+        else:
+            return UsmUserData(user, authkey, privkey, authProtocol=auth_proto, privProtocol=priv_proto)
+    else:
+        return None
+
+def snmp_get(ip, community, oid, version, user=None, authkey=None, privkey=None, auth_protocol="NONE", priv_protocol="NONE"):
     result = []
+    auth_data = get_auth_data(version, community, user, authkey, privkey, auth_protocol, priv_protocol)
+    if not auth_data:
+        result.append('Versión SNMP no soportada')
+        return result
+
     iterator = getCmd(
         SnmpEngine(),
-        CommunityData(community),
+        auth_data,
         UdpTransportTarget((ip, 161)),
         ContextData(),
         ObjectType(ObjectIdentity(oid))
     )
+
     errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
     if errorIndication:
         result.append(str(errorIndication))
@@ -132,15 +197,21 @@ def snmp_get(ip, community, oid):
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
 
-def snmp_next(ip, community, oid):
+def snmp_next(ip, community, oid, version, user=None, authkey=None, privkey=None, auth_protocol="NONE", priv_protocol="NONE"):
     result = []
+    auth_data = get_auth_data(version, community, user, authkey, privkey, auth_protocol, priv_protocol)
+    if not auth_data:
+        result.append('Versión SNMP no soportada')
+        return result
+
     iterator = nextCmd(
         SnmpEngine(),
-        CommunityData(community),
+        auth_data,
         UdpTransportTarget((ip, 161)),
         ContextData(),
         ObjectType(ObjectIdentity(oid)),
     )
+
     errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
     if errorIndication:
         result.append(str(errorIndication))
@@ -151,17 +222,23 @@ def snmp_next(ip, community, oid):
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
 
-def snmp_bulkwalk(ip, community, oid):
+def snmp_bulkwalk(ip, community, oid, version, user=None, authkey=None, privkey=None, auth_protocol="NONE", priv_protocol="NONE"):
     result = []
+    auth_data = get_auth_data(version, community, user, authkey, privkey, auth_protocol, priv_protocol)
+    if not auth_data:
+        result.append('Versión SNMP no soportada')
+        return result
+
     iterator = bulkCmd(
         SnmpEngine(),
-        CommunityData(community),
+        auth_data,
         UdpTransportTarget((ip, 161)),
         ContextData(), 0, 1,
         ObjectType(ObjectIdentity(oid)),
         lexicographicMode=False
     )
-    for (errorIndication, errorStatus, errorIndex, varBinds) in iterator:
+
+    for errorIndication, errorStatus, errorIndex, varBinds in iterator:
         if errorIndication:
             result.append(str(errorIndication))
             break
@@ -170,18 +247,24 @@ def snmp_bulkwalk(ip, community, oid):
             break
         else:
             for varBind in varBinds:
-                result.append(f'{varBind[0]} = {varBind[1].prettyPrint()}')
+                result.append(f'{varBind[0]} = {varBind[1]}')
     return result
 
-def snmp_set(ip, community, oid, value):
+def snmp_set(ip, community, oid, value, version, user=None, authkey=None, privkey=None, auth_protocol="NONE", priv_protocol="NONE"):
     result = []
+    auth_data = get_auth_data(version, community, user, authkey, privkey, auth_protocol, priv_protocol)
+    if not auth_data:
+        result.append('Versión SNMP no soportada')
+        return result
+
     iterator = setCmd(
         SnmpEngine(),
-        CommunityData(community),
+        auth_data,
         UdpTransportTarget((ip, 161)),
         ContextData(),
         ObjectType(ObjectIdentity(oid), value)
     )
+
     errorIndication, errorStatus, errorIndex, varBinds = next(iterator)
     if errorIndication:
         result.append(str(errorIndication))
@@ -191,6 +274,7 @@ def snmp_set(ip, community, oid, value):
         for varBind in varBinds:
             result.append(f'{varBind[0]} = {varBind[1]}')
     return result
+
 def trap_callback(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
     print("Trap recibido.")
     try:
