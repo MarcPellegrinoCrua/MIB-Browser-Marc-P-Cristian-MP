@@ -21,9 +21,9 @@
             <label for="user">Usuario:</label>
                 <input type="text" id="user" name="user"><br><br>
             <label for="authkey">Authkey:</label>
-                <input type="password" id="authkey" name="authkey">
+                <input type="password" id="authkey" name="authkey"><br><br>
             <label for="privkey">Privkey:</label>
-                <input type="password" id="privkey" name="privkey">
+                <input type="password" id="privkey" name="privkey"><br><br>
             <label for="auth_protocol">Auth Protocol:</label>
             <select id="auth_protocol" name="auth_protocol">
                 <option value="MD5">MD5</option>
@@ -35,12 +35,12 @@
                 <option value="DES">DES</option>
                 <option value="AES">AES</option>
                 <option value="NONE">NO</option>
-            </select><br><br>
+            </select>
         </div>
         <div id="community" style="display: block;">
             <label for="community">Comunitat:</label>
-                <input type="password" id="community" name="community"><br><br>
-        </div>
+                <input type="password" id="community" name="community">
+        </div><br><br>
         {% if db_online %}
             <label for="oid">OID:</label>
             <select id="oid" name="oid" required>
@@ -55,16 +55,13 @@
             <label for="oid">Introduce manualmente el OID:</label>
             <input type="text" name="oid" id="oid" placeholder="ej: 1.3.6.1.2.1.1.1.0" required><br><br>
         {% endif %}
-
         <label for="set_value">Valor a establecer:</label>
         <input type="text" id="set_value" name="set_value"><br><br>
-        
         <label for="set_type">Tipo de valor:</label>
         <select id="set_type" name="set_type">
             <option value="OctetString">OctetString</option>
             <option value="Integer">Integer</option>
         </select><br><br>
-
         <label for="operation">Operació:</label>
         <select id="operation" name="operation">
             <option value="get">GET</option>

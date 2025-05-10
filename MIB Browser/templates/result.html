@@ -10,7 +10,15 @@
     <ul>
         <li><span>IP de l'agent:</span> {{ agent_ip }}</li>
         <li><span>Versió SNMP:</span> {{ version }}</li>
-        <li><span>Comunitat:</span> {{ community }}</li>
+        {% if v3 %}
+            <li><span>Usuari:</span> {{ user }}</li>
+            <li><span>AuthKey:</span> {{ authkey }}</li>
+            <li><span>Auth Protocol:</span> {{ auth_protocol }}</li>
+            <li><span>PrivKey:</span> {{ privkey }}</li>
+            <li><span>Priv Protocol:</span> {{ priv_protocol }}</li>
+        {% else %}
+            <li><span>Comunitat:</span> {{ community }}</li>
+        {% endif %}
         <li><span>OID:</span> {{ oid }}</li>
         <li><span>Operació:</span> {{ operation }}</li>
     </ul>

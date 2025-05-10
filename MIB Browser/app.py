@@ -65,6 +65,7 @@ def snmp():
 
         if version in ['1', '2c']:
             community = request.form.get("community")
+            v3 = False
             if not community:
                 return render_template("error.html", error_message="Falta el parámetro 'community'", error_detail="Obligatorio para SNMP v1/v2c.")
         elif version == '3':
@@ -73,6 +74,7 @@ def snmp():
             privkey = request.form.get('privkey')
             auth_protocol = request.form.get('auth_protocol')
             priv_protocol = request.form.get('priv_protocol')
+            v3 = True
             if not user:
                 return render_template("error.html", error_message="Falta el usuario SNMPv3", error_detail="Debes rellenar el campo 'user' para SNMPv3.")
 
@@ -98,19 +100,7 @@ def snmp():
             return render_template("error.html", error_message="Operació no reconeguda", error_detail="L'operació SNMP no és vàlida.")
 
         return render_template(
-            "result.html",
-            result=result,
-            agent_ip=agent_ip,
-            version=version,
-            community=community,
-            oid=oid,
-            operation=operation,
-            user=user,
-            authkey=authkey,
-            privkey=privkey,
-            auth_protocol=auth_protocol,
-            priv_protocol=priv_protocol
-        )
+            "result.html", result=result, agent_ip=agent_ip, version=version, community=community, oid=oid, operation=operation, user=user, authkey=authkey, privkey=privkey, auth_protocol=auth_protocol, priv_protocol=priv_protocol, v3=v3)
     except (PySnmpError, socket.gaierror) as e:
         return render_template("error.html", error_message="Error SNMP o de xarxa", error_detail=str(e))
 
